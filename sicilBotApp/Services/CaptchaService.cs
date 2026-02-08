@@ -8,13 +8,13 @@ namespace sicilBotApp.Services
     public class CaptchaService : ICaptchaService, IDisposable
     {
         private readonly IHttpClientWrapper _httpClient;
-        private readonly ILogger _logger;
+        private readonly ICustomLogger _logger; // ILogger yerine ICustomLogger
         private readonly Lazy<TesseractEngine> _tesseractEngine;
         private const string CaptchaPattern = @"<img[^>]*?id=['""]CaptchaImg['""][^>]*?src=['""]([^'""]+?)['""]";
         private bool _disposed;
         private byte[]? _lastCaptchaImage;
 
-        public CaptchaService(IHttpClientWrapper httpClient, ILogger logger)
+        public CaptchaService(IHttpClientWrapper httpClient, Infrastructure.ICustomLogger logger)
         {
             _httpClient = httpClient;
             _logger = logger;

@@ -1,8 +1,370 @@
-﻿@{
+﻿@model crmApp.Models.sicilAramaModel;
+@{
     ViewData["Title"] = "Home Page";
 }
 
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://docs.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="container mt-4">
+    <h2>Ticaret Sicili Gazete Sorgulama</h2>
+
+    @if (ViewBag.ApiStatus != null)
+    {
+        <div class="alert alert-info">@ViewBag.ApiStatus</div>
+    }
+
+    <form method="post" action="/Home/Index">
+        @Html.AntiForgeryToken()
+        <div class="row">
+            <div class="col-md-3">
+                <select class="form-control input-lg" asp-for="SicilMudurluguId">
+                    <option value="0">Sicil Müdürlüğü Seçiniz...</option>
+                    <option value="232">İSTANBUL</option>
+                    <option value="18">ANKARA</option>
+                    <option value="233">İZMİR</option>
+                    <option value="1">ACIPAYAM</option>
+                    <option value="2">ADANA</option>
+                    <option value="3">ADIYAMAN</option>
+                    <option value="4">AFYONKARAHİSAR</option>
+                    <option value="5">AFŞİN</option>
+                    <option value="6">AKHİSAR</option>
+                    <option value="7">AKSARAY</option>
+                    <option value="8">AKYAZI</option>
+                    <option value="9">AKÇAKOCA</option>
+                    <option value="10">AKŞEHİR</option>
+                    <option value="11">ALACA</option>
+                    <option value="12">ALANYA</option>
+                    <option value="13">ALAPLI</option>
+                    <option value="14">ALAŞEHİR</option>
+                    <option value="15">ALİAĞA</option>
+                    <option value="16">AMASYA</option>
+                    <option value="17">ANAMUR</option>
+                    <option value="19">ANTALYA</option>
+                    <option value="20">ARDAHAN</option>
+                    <option value="21">ARDEŞEN</option>
+                    <option value="22">ARHAVİ</option>
+                    <option value="23">ARTVİN</option>
+                    <option value="24">AYDIN</option>
+                    <option value="25">AYVALIK</option>
+                    <option value="26">AĞRI</option>
+                    <option value="27">BABADAĞ</option>
+                    <option value="28">BABAESKİ</option>
+                    <option value="29">BAFRA</option>
+                    <option value="30">BALIKESİR</option>
+                    <option value="31">BANDIRMA</option>
+                    <option value="32">BARTIN</option>
+                    <option value="33">BATMAN</option>
+                    <option value="34">BAYBURT</option>
+                    <option value="35">BAYINDIR</option>
+                    <option value="36">BERGAMA</option>
+                    <option value="37">BEYPAZARI</option>
+                    <option value="38">BEYŞEHİR</option>
+                    <option value="39">BODRUM</option>
+                    <option value="40">BOLU</option>
+                    <option value="41">BOLVADİN</option>
+                    <option value="42">BOR</option>
+                    <option value="43">BORÇKA</option>
+                    <option value="44">BOYABAT</option>
+                    <option value="45">BOZÜYÜK</option>
+                    <option value="46">BOĞAZLIYAN</option>
+                    <option value="47">BUCAK</option>
+                    <option value="48">BULANCAK</option>
+                    <option value="49">BULDAN</option>
+                    <option value="50">BURDUR</option>
+                    <option value="51">BURHANİYE</option>
+                    <option value="52">BURSA</option>
+                    <option value="53">BÜNYAN</option>
+                    <option value="54">BİGA</option>
+                    <option value="55">BİLECİK</option>
+                    <option value="56">BİNGÖL</option>
+                    <option value="57">BİRECİK</option>
+                    <option value="58">BİTLİS</option>
+                    <option value="59">CEYHAN</option>
+                    <option value="60">CİZRE</option>
+                    <option value="61">DEMİRCİ</option>
+                    <option value="62">DENİZLİ</option>
+                    <option value="63">DEVELİ</option>
+                    <option value="64">DEVREK</option>
+                    <option value="65">DOĞANHİSAR</option>
+                    <option value="66">DOĞUBAYAZIT</option>
+                    <option value="67">DÖRTYOL</option>
+                    <option value="68">DÜZCE</option>
+                    <option value="69">DİDİM</option>
+                    <option value="70">DİNAR</option>
+                    <option value="71">DİYARBAKIR</option>
+                    <option value="72">EDREMİT</option>
+                    <option value="73">EDİRNE</option>
+                    <option value="74">ELAZIĞ</option>
+                    <option value="75">ELBİSTAN</option>
+                    <option value="76">EMİRDAĞ</option>
+                    <option value="77">ERBAA</option>
+                    <option value="78">ERCİŞ</option>
+                    <option value="79">ERDEK</option>
+                    <option value="80">ERDEMLİ</option>
+                    <option value="81">ERZURUM</option>
+                    <option value="82">ERZİN</option>
+                    <option value="83">ERZİNCAN</option>
+                    <option value="84">ESKİŞEHİR</option>
+                    <option value="85">FATSA</option>
+                    <option value="86">FETHİYE</option>
+                    <option value="87">GAZİANTEP</option>
+                    <option value="88">GEBZE</option>
+                    <option value="89">GEDİZ</option>
+                    <option value="90">GELİBOLU</option>
+                    <option value="91">GEMLİK</option>
+                    <option value="92">GEREDE</option>
+                    <option value="93">GÖNEN</option>
+                    <option value="94">GÖRDES</option>
+                    <option value="95">GÜMÜŞHACIKÖY</option>
+                    <option value="96">GÜMÜŞHANE</option>
+                    <option value="97">GİRESUN</option>
+                    <option value="98">HAKKARİ</option>
+                    <option value="99">HATAY</option>
+                    <option value="100">HAVZA</option>
+                    <option value="101">HAYMANA</option>
+                    <option value="102">HAYRABOLU</option>
+                    <option value="103">HOPA</option>
+                    <option value="104">ILGIN</option>
+                    <option value="105">ISPARTA</option>
+                    <option value="106">IĞDIR</option>
+                    <option value="107">KAHRAMANMARAŞ</option>
+                    <option value="108">KADİRLİ</option>
+                    <option value="109">KAMAN</option>
+                    <option value="110">KARABÜK</option>
+                    <option value="111">KARACABEY</option>
+                    <option value="113">KARAHALLI</option>
+                    <option value="114">KARAMAN</option>
+                    <option value="115">KARAPINAR</option>
+                    <option value="116">KARS</option>
+                    <option value="117">KASTAMONU</option>
+                    <option value="118">KAYSERİ</option>
+                    <option value="120">KELKİT</option>
+                    <option value="121">KEŞAN</option>
+                    <option value="122">KIRIKHAN</option>
+                    <option value="123">KIRIKKALE</option>
+                    <option value="124">KIRKLARELİ</option>
+                    <option value="125">KIRŞEHİR</option>
+                    <option value="126">KIZILTEPE</option>
+                    <option value="127">KOCAELİ</option>
+                    <option value="128">KONYA EREĞLİ</option>
+                    <option value="129">KONYA</option>
+                    <option value="130">KOZAN</option>
+                    <option value="131">KUMLUCA</option>
+                    <option value="132">KUŞADASI</option>
+                    <option value="133">KÖRFEZ</option>
+                    <option value="134">KÜTAHYA</option>
+                    <option value="135">KİLİS</option>
+                    <option value="136">LÜLEBURGAZ</option>
+                    <option value="137">MALATYA</option>
+                    <option value="138">MALKARA</option>
+                    <option value="139">MANAVGAT</option>
+                    <option value="140">MANİSA</option>
+                    <option value="141">MARDİN</option>
+                    <option value="142">MARMARİS</option>
+                    <option value="143">MENEMEN</option>
+                    <option value="144">MERSİN</option>
+                    <option value="145">MERZİFON</option>
+                    <option value="146">MUCUR</option>
+                    <option value="147">MUSTAFAKEMALPAŞA</option>
+                    <option value="148">MUT</option>
+                    <option value="149">MUĞLA</option>
+                    <option value="150">MUŞ</option>
+                    <option value="151">MİLAS</option>
+                    <option value="152">NAZİLLİ</option>
+                    <option value="153">NEVŞEHİR</option>
+                    <option value="154">NUSAYBİN</option>
+                    <option value="155">NİKSAR</option>
+                    <option value="156">NİZİP</option>
+                    <option value="157">NİĞDE</option>
+                    <option value="158">OLTU</option>
+                    <option value="159">ORDU</option>
+                    <option value="160">ORHANGAZİ</option>
+                    <option value="161">OSMANİYE</option>
+                    <option value="162">PASİNLER</option>
+                    <option value="163">PAZAR</option>
+                    <option value="164">POLATLI</option>
+                    <option value="165">REYHANLI</option>
+                    <option value="167">RİZE</option>
+                    <option value="168">SAFRANBOLU</option>
+                    <option value="169">SAKARYA</option>
+                    <option value="170">SALİHLİ</option>
+                    <option value="171">SAMSUN</option>
+                    <option value="172">SANDIKLI</option>
+                    <option value="173">SARAYKÖY</option>
+                    <option value="174">SELÇUK</option>
+                    <option value="175">SEYDİŞEHİR</option>
+                    <option value="176">SOMA</option>
+                    <option value="177">SULUOVA</option>
+                    <option value="178">SUNGURLU</option>
+                    <option value="179">SUSURLUK</option>
+                    <option value="180">SÖKE</option>
+                    <option value="181">SİLİFKE</option>
+                    <option value="182">SİMAV</option>
+                    <option value="183">SİNOP</option>
+                    <option value="184">SİVAS</option>
+                    <option value="185">SİVEREK</option>
+                    <option value="186">SİİRT</option>
+                    <option value="187">TARSUS</option>
+                    <option value="188">TATVAN</option>
+                    <option value="189">TAVAS</option>
+                    <option value="190">TAVŞANLI</option>
+                    <option value="191">TAŞKÖPRÜ</option>
+                    <option value="192">TEKİRDAĞ</option>
+                    <option value="193">TERME</option>
+                    <option value="194">TOKAT</option>
+                    <option value="195">TORBALI</option>
+                    <option value="196">TOSYA</option>
+                    <option value="197">TRABZON</option>
+                    <option value="198">TUNCELİ</option>
+                    <option value="199">TURGUTLU</option>
+                    <option value="200">TURHAL</option>
+                    <option value="201">TİRE</option>
+                    <option value="202">UZUNKÖPRÜ</option>
+                    <option value="203">UŞAK</option>
+                    <option value="204">VAN</option>
+                    <option value="205">VEZİRKÖPRÜ</option>
+                    <option value="206">YAHYALI</option>
+                    <option value="207">YALOVA</option>
+                    <option value="208">YALVAÇ</option>
+                    <option value="209">YENİŞEHİR</option>
+                    <option value="210">YERKÖY</option>
+                    <option value="211">YOZGAT</option>
+                    <option value="212">YÜKSEKOVA</option>
+                    <option value="213">ZONGULDAK</option>
+                    <option value="214">ZİLE</option>
+                    <option value="215">ÇANAKKALE</option>
+                    <option value="216">ÇANKIRI</option>
+                    <option value="217">ÇARŞAMBA</option>
+                    <option value="218">ÇAY</option>
+                    <option value="219">ÇAYCUMA</option>
+                    <option value="220">ÇAYELİ</option>
+                    <option value="221">ÇERKEZKÖY</option>
+                    <option value="222">ÇORLU</option>
+                    <option value="223">ÇORUM</option>
+                    <option value="224">ÇUMRA</option>
+                    <option value="225">ÖDEMİŞ</option>
+                    <option value="226">ÜNYE</option>
+                    <option value="227">ÜRGÜP</option>
+                    <option value="228">İNEBOLU</option>
+                    <option value="229">İNEGÖL</option>
+                    <option value="230">İSKENDERUN</option>
+                    <option value="231">İSLAHİYE</option>
+                    <option value="234">İZNİK</option>
+                    <option value="235">ŞANLIURFA</option>
+                    <option value="236">ŞEREFLİKOÇHİSAR</option>
+                    <option value="237">ŞIRNAK</option>
+                    <option value="241">SORGUN</option>
+                    <option value="242">OF</option>
+                    <option value="243">ŞEFAATLİ</option>
+                    <option value="246">KARADENİZ EREĞLİ</option>
+                </select>
+            </div>
+            <div class="col-md-3">
+                <input asp-for="TicSicNo" class="form-control input-lg" placeholder="Ticaret Sicili No">
+            </div>
+            <div class="col-md-3">
+                <input type="text" class="form-control input-lg" asp-for="TicaretUnvani" placeholder="Ticaret Unvanı (En az ilk 5 karakter)">
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary btn-lg">Sorgula</button>
+            </div>
+        </div>
+    </form>
+
+    @if (ViewBag.Error != null)
+    {
+        <div class="alert alert-danger mt-3">
+            <strong>Hata:</strong> @ViewBag.Error
+        </div>
+    }
+
+    @if (ViewBag.Message != null)
+    {
+        <div class="alert alert-success mt-3">
+            @ViewBag.Message
+        </div>
+    }
+
+    @if (ViewBag.Results != null)
+    {
+        var results = ViewBag.Results as System.Collections.Generic.List<crmApp.Services.GazetteInfo>;
+
+        if (results != null && results.Count > 0)
+        {
+            <div class="mt-4">
+                <h3>Bulunan Gazeteler (@results.Count adet)</h3>
+                <div class="table-responsive">
+                    <table class="table table-striped table-bordered table-hover">
+                        <thead class="thead-dark">
+                            <tr>
+                                <th>Sicil Müdürlüğü</th>
+                                <th>Sicil No</th>
+                                <th>Ticaret Unvanı</th>
+                                <th>Yayın Tarihi</th>
+                                <th>Sayı No</th>
+                                <th>Sayfa No</th>
+                                <th>İlan Türü</th>
+                                <th>İşlemler</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var gazette in results)
+                            {
+                                <tr>
+                                    <td>@gazette.RegisterOffice</td>
+                                    <td>@gazette.RegisterNumber</td>
+                                    <td><strong>@gazette.CompanyTitle</strong></td>
+                                    <td>@gazette.PublicationDate</td>
+                                    <td>@gazette.IssueNumber</td>
+                                    <td>@gazette.PageNumber</td>
+                                    <td>@gazette.AnnouncementType</td>
+                                    <td>
+                                        @if (!string.IsNullOrEmpty(gazette.PdfUrl))
+                                        {
+                                            <a href="@gazette.PdfUrl" target="_blank" class="btn btn-sm btn-danger">
+                                                <i class="fas fa-file-pdf"></i> PDF İndir
+                                            </a>
+                                        }
+                                        @if (!string.IsNullOrEmpty(gazette.VisitUrl))
+                                        {
+                                            <a href="@gazette.VisitUrl" target="_blank" class="btn btn-sm btn-info">
+                                                <i class="fas fa-external-link-alt"></i> Görüntüle
+                                            </a>
+                                        }
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-warning mt-3">
+                <strong>Sonuç bulunamadı.</strong> Arama kriterlerinizi kontrol edip tekrar deneyin.
+            </div>
+        }
+    }
 </div>
+
+@section Scripts {
+    <script>
+        // Form validasyonu
+        $('form').on('submit', function(e) {
+            var sicilMudurluguId = $('#SicilMudurluguId').val();
+            var ticSicNo = $('#TicSicNo').val();
+            var ticaretUnvani = $('#TicaretUnvani').val();
+
+            if (sicilMudurluguId === '0' || sicilMudurluguId === '') {
+                alert('Lütfen Sicil Müdürlüğü seçiniz.');
+                e.preventDefault();
+                return false;
+            }
+
+            if (!ticSicNo && (!ticaretUnvani || ticaretUnvani.length < 5)) {
+                alert('Lütfen Ticaret Sicili No veya en az 5 karakterlik Ticaret Unvanı giriniz.');
+                e.preventDefault();
+                return false;
+            }
+        });
+    </script>
+}

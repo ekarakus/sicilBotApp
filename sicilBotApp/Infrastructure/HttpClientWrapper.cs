@@ -22,12 +22,14 @@ namespace sicilBotApp.Infrastructure
         private const string BaseUrl = "https://www.ticaretsicil.gov.tr/";
         private readonly string _sessionFilePath = Path.Combine(AppContext.BaseDirectory, "session.json");
         private readonly string _tessdataPath = Path.Combine(AppContext.BaseDirectory, "tessdata");
-        private readonly ILogger _logger;
+        private readonly ICustomLogger _logger;
 
         public CookieContainer Cookies => _cookieContainer;
 
         public HttpClientWrapper()
-        {_logger = new ConsoleLogger(); // Logger'ý burada da kullanmak için örnek oluþturuyoruz
+        {//aþaðýda ne yapmam gerekir?
+            _logger = new ConsoleLogger();
+            // Logger'ý burada da kullanmak için örnek oluþturuyoruz
             _cookieContainer = new CookieContainer();
             var handler = new HttpClientHandler
             {

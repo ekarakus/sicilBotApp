@@ -1,6 +1,6 @@
 namespace sicilBotApp.Infrastructure
 {
-    public class ConsoleLogger : ILogger
+    public class ConsoleLogger : ICustomLogger
     {
         public void Log(string message)
         {

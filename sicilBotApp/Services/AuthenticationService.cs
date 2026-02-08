@@ -9,7 +9,7 @@ namespace sicilBotApp.Services
     {
         private readonly IHttpClientWrapper _httpClient;
         private readonly ICaptchaService _captchaService; // Eksik baðýmlýlýk eklendi
-        private readonly ILogger _logger;
+        private readonly ICustomLogger _logger;
 
         private const string LoginUrl = "https://www.ticaretsicil.gov.tr/view/modal/uyegirisi_ok.php";
         private const string LoginEmail = "sicil.sorgulama@mail.com"; // Sabit bilgiler
@@ -17,7 +17,7 @@ namespace sicilBotApp.Services
 
         public bool IsAuthenticated { get; private set; }
 
-        public AuthenticationService(IHttpClientWrapper httpClient, ICaptchaService captchaService, ILogger logger)
+        public AuthenticationService(IHttpClientWrapper httpClient, ICaptchaService captchaService, ICustomLogger logger)
         {
             _httpClient = httpClient;
             _captchaService = captchaService;

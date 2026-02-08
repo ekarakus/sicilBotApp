@@ -8,13 +8,13 @@ namespace sicilBotApp.Services
     {
         private readonly IHttpClientWrapper _httpClient;
         private readonly IAuthenticationService _authService;
-        private readonly ILogger _logger;
+        private readonly ICustomLogger _logger;
         private const string SearchUrl = "https://www.ticaretsicil.gov.tr/view/hizlierisim/ilangoruntuleme_ok.php";
 
         public GazetteSearchService(
             IHttpClientWrapper httpClient, 
             IAuthenticationService authService,
-            ILogger logger)
+            ICustomLogger logger)
         {
             _httpClient = httpClient;
             _authService = authService;
