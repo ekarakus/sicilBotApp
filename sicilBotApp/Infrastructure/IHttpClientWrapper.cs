@@ -8,9 +8,9 @@ namespace sicilBotApp.Infrastructure
         Task<byte[]> GetByteArrayAsync(string url);
         Task<HttpResponseData> PostMultipartAsync(string url, Dictionary<string, string> parameters);
         Task<string> DownloadPdfTextAsync(string url);
-        CookieContainer Cookies { get; }
-        public void SaveSession();
-                 public void LoadSession();
+
+        void SaveSession();
+        void LoadSession();
     }
 
     public class HttpResponseData

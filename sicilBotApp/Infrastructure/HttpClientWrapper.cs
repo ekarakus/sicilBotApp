@@ -169,38 +169,32 @@ namespace sicilBotApp.Infrastructure
         {
             try
             {
-                // CookieContainer doðrudan serileþtirilemediði için içindeki çerezleri listeye çevirip kaydetmelisiniz
-                var cookies = _cookieContainer.GetAllCookies();
+                var uri = new Uri(BaseUrl);
+                // CookieContainer'dan tüm çerezleri alýyoruz (Domain bazlý)
+                var cookies = _cookieContainer.GetCookies(uri).Cast<Cookie>().ToList();
                 var json = JsonSerializer.Serialize(cookies);
                 File.WriteAllText(_sessionFilePath, json);
             }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Oturum kaydedilemedi: {ex.Message}");
-            }
+            catch (Exception ex) { /* Loglama */ }
         }
 
         public void LoadSession()
         {
-            if (File.Exists(_sessionFilePath))
+            if (!File.Exists(_sessionFilePath)) return;
+            try
             {
-                try
+                var json = File.ReadAllText(_sessionFilePath);
+                var cookies = JsonSerializer.Deserialize<List<Cookie>>(json);
+                if (cookies != null)
                 {
-                    var json = File.ReadAllText(_sessionFilePath);
-                    var cookies = JsonSerializer.Deserialize<List<Cookie>>(json);
-                    if (cookies != null)
+                    var uri = new Uri(BaseUrl);
+                    foreach (var cookie in cookies)
                     {
-                        foreach (Cookie cookie in cookies)
-                        {
-                            _cookieContainer.Add(new Uri("https://www.ticaretsicil.gov.tr"), cookie);
-                        }
+                        _cookieContainer.Add(uri, cookie);
                     }
                 }
-                catch (Exception ex)
-                {
-                    _logger.LogError($"Oturum yüklenemedi: {ex.Message}");
-                }
             }
+            catch (Exception ex) { /* Loglama */ }
         }
     }
 

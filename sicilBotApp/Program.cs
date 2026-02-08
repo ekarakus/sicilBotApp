@@ -175,7 +175,8 @@ namespace sicilBotApp
     Console.Write("\nFirma Adı: ");
     var companyName = Console.ReadLine() ?? string.Empty;
 
-    Console.Write("Sicil No: ");
+    
+            Console.Write("Sicil No: ");
     var registerNo = Console.ReadLine() ?? string.Empty;
 
     Console.Write("Sicil Ofisi Kodu: ");
