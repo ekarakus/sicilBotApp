@@ -47,7 +47,7 @@ namespace sicilBotApp
             var httpClient = new HttpClientWrapper();
             
             _captchaService = new CaptchaService(httpClient, _logger);
-            _authService = new AuthenticationService(httpClient, _logger);
+            _authService = new AuthenticationService(httpClient, _captchaService, _logger);
             _gazetteService = new GazetteSearchService(httpClient, _authService, _logger);
         }
 
@@ -146,7 +146,7 @@ namespace sicilBotApp
         // Giriş başarısız
         _logger!.LogError(loginResult.Message);
 
-        if (!string.IsNullOrEmpty(loginResult.Data))
+        if (!(loginResult.Data))
         {
             Console.WriteLine($"\nYeni Captcha Base64: {loginResult.Data}");
             Console.Write("Captcha kodunu tekrar giriniz (veya 'q' ile çıkış): ");

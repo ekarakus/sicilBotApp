@@ -8,6 +8,7 @@ using System.Drawing.Imaging;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 using Tesseract;
 
@@ -15,13 +16,18 @@ namespace sicilBotApp.Infrastructure
 {
     public class HttpClientWrapper : IHttpClientWrapper
     {
+        
         private readonly HttpClient _httpClient;
         private readonly CookieContainer _cookieContainer;
         private const string BaseUrl = "https://www.ticaretsicil.gov.tr/";
+        private readonly string _sessionFilePath = Path.Combine(AppContext.BaseDirectory, "session.json");
         private readonly string _tessdataPath = Path.Combine(AppContext.BaseDirectory, "tessdata");
+        private readonly ILogger _logger;
+
+        public CookieContainer Cookies => _cookieContainer;
 
         public HttpClientWrapper()
-        {
+        {_logger = new ConsoleLogger(); // Logger'ý burada da kullanmak için örnek oluþturuyoruz
             _cookieContainer = new CookieContainer();
             var handler = new HttpClientHandler
             {
@@ -157,6 +163,44 @@ namespace sicilBotApp.Infrastructure
                 if (match.Success) return match.Groups["url"].Value;
             }
             return string.Empty;
+        }
+
+        public void SaveSession()
+        {
+            try
+            {
+                // CookieContainer doðrudan serileþtirilemediði için içindeki çerezleri listeye çevirip kaydetmelisiniz
+                var cookies = _cookieContainer.GetAllCookies();
+                var json = JsonSerializer.Serialize(cookies);
+                File.WriteAllText(_sessionFilePath, json);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Oturum kaydedilemedi: {ex.Message}");
+            }
+        }
+
+        public void LoadSession()
+        {
+            if (File.Exists(_sessionFilePath))
+            {
+                try
+                {
+                    var json = File.ReadAllText(_sessionFilePath);
+                    var cookies = JsonSerializer.Deserialize<List<Cookie>>(json);
+                    if (cookies != null)
+                    {
+                        foreach (Cookie cookie in cookies)
+                        {
+                            _cookieContainer.Add(new Uri("https://www.ticaretsicil.gov.tr"), cookie);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError($"Oturum yüklenemedi: {ex.Message}");
+                }
+            }
         }
     }
 

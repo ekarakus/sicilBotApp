@@ -2,9 +2,10 @@ namespace sicilBotApp.Services
 {
     public interface IAuthenticationService
     {
-        Task<DTOs.ApiResponse<bool>> LoginAsync(string captchaText);
-     //   Task<DTOs.ApiResponse<bool>> LoginWithConfigAsync();
-        Task<DTOs.ApiResponse<bool>> LoginAsync();
+        /// <summary>
+        /// Captcha kodu verilirse doðrudan login olur, verilmezse otomatik çözmeyi dener.
+        /// </summary>
+        Task<DTOs.ApiResponse<bool>> LoginAsync(string? captchaText = null);
         bool IsAuthenticated { get; }
     }
 }

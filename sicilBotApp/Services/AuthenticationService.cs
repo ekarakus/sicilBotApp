@@ -1,144 +1,89 @@
 using sicilBotApp.Infrastructure;
+using sicilBotApp.DTOs;
+using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace sicilBotApp.Services
 {
     public class AuthenticationService : IAuthenticationService
     {
         private readonly IHttpClientWrapper _httpClient;
+        private readonly ICaptchaService _captchaService; // Eksik baðýmlýlýk eklendi
         private readonly ILogger _logger;
+
         private const string LoginUrl = "https://www.ticaretsicil.gov.tr/view/modal/uyegirisi_ok.php";
-        private const string LoginEmail = "sicil.sorgulama@mail.com";
+        private const string LoginEmail = "sicil.sorgulama@mail.com"; // Sabit bilgiler
         private const string LoginPassword = "Alo12345.";
 
         public bool IsAuthenticated { get; private set; }
 
-        public AuthenticationService(IHttpClientWrapper httpClient, ILogger logger)
+        public AuthenticationService(IHttpClientWrapper httpClient, ICaptchaService captchaService, ILogger logger)
         {
             _httpClient = httpClient;
+            _captchaService = captchaService;
             _logger = logger;
         }
 
-        public async Task<DTOs.ApiResponse<bool>> LoginAsync(string captchaText)
+        public async Task<ApiResponse<bool>> LoginAsync(string? captchaText = null)
         {
             try
             {
-                _logger.Log("Giriþ yapýlýyor...");
+                // 1. Captcha saðlanmamýþsa otomatik çözmeyi dene
+                if (string.IsNullOrEmpty(captchaText))
+                {
+                    _logger.Log("Captcha yükleniyor ve otomatik çözülmeye çalýþýlýyor...");
+                    var captchaResponse = await _captchaService.LoadCaptchaAsync();
+
+                    if (captchaResponse.IsCriticalError)
+                    {
+                        return new ApiResponse<bool> { Success = false, Message = captchaResponse.Message };
+                    }
+
+                    if (captchaResponse.RequiresManualInput)
+                    {
+                        // Program.cs bu mesajý kontrol ederek kullanýcýdan giriþ ister
+                        return new ApiResponse<bool>
+                        {
+                            Success = false,
+                            Message = "CAPTCHA_REQUIRED",
+                            Data = false
+                        };
+                    }
+
+                    captchaText = captchaResponse.AutoResolvedText;
+                }
+
+                // 2. Login iþlemini gerçekleþtir
+                _logger.Log($"Giriþ yapýlýyor... (Captcha: {captchaText})");
 
                 var parameters = new Dictionary<string, string>
                 {
                     { "LoginEmail", LoginEmail },
                     { "LoginSifre", LoginPassword },
-                    { "Captcha", captchaText }
+                    { "Captcha", captchaText! }
                 };
 
                 var response = await _httpClient.PostMultipartAsync(LoginUrl, parameters);
 
+                // TOBB sitesi baþarýlý giriþte "1" döner
                 if (response.Content?.Trim() == "1")
                 {
                     IsAuthenticated = true;
+                    _httpClient.SaveSession();
                     _logger.Log("Giriþ baþarýlý");
-
-                    return new DTOs.ApiResponse<bool>
-                    {
-                        Success = true,
-                        Message = "Giriþ baþarýlý",
-                        Data = true
-                    };
+                    return new ApiResponse<bool> { Success = true, Message = "Giriþ baþarýlý", Data = true };
                 }
 
-                _logger.LogError("Giriþ baþarýsýz");
-                return new DTOs.ApiResponse<bool>
-                {
-                    Success = false,
-                    Message = "Giriþ baþarýsýz. Captcha yanlýþ olabilir.",
-                    Data = false
-                };
+                _logger.LogError("Giriþ baþarýsýz. Captcha veya bilgiler hatalý.");
+                return new ApiResponse<bool> { Success = false, Message = "Giriþ baþarýsýz.", Data = false };
             }
             catch (Exception ex)
             {
                 _logger.LogError($"Giriþ hatasý: {ex.Message}");
-                return new DTOs.ApiResponse<bool>
-                {
-                    Success = false,
-                    Message = ex.Message,
-                    Data = false
-                };
+                return new ApiResponse<bool> { Success = false, Message = ex.Message, Data = false };
             }
         }
-
-        public async Task<DTOs.ApiResponse<bool>> LoginAsync(string? captchaCode = null)
-        {
-            try
-            {
-                // Eðer captcha kodu verilmemiþse, otomatik yükle
-                if (string.IsNullOrEmpty(captchaCode))
-                {
-                    _logger.Log("Captcha yükleniyor...");
-                    var captchaResponse = await _captchaService.LoadCaptchaAsync();
-
-                    if (captchaResponse.IsCriticalError)
-                    {
-                        return new ApiResponse<string>
-                        {
-                            Success = false,
-                            Message = captchaResponse.Message,
-                            Data = null
-                        };
-                    }
-
-                    if (captchaResponse.RequiresManualInput)
-                    {
-                        return new ApiResponse<string>
-                        {
-                            Success = false,
-                            Message = "Manuel captcha giriþi gerekli",
-                            Data = captchaResponse.CaptchaImageBase64
-                        };
-                    }
-
-                    captchaCode = captchaResponse.AutoResolvedText;
-                }
-
-                // Login iþlemi
-                _logger.Log($"Giriþ yapýlýyor... (Captcha: {captchaCode})");
-
-                var parameters = new Dictionary<string, string>
-                {
-                    { "LoginEmail", _credentials.Email },
-                    { "LoginSifre", _credentials.Password },
-                    { "Captcha", captchaCode! }
-                };
-
-                var response = await _httpClient.PostMultipartAsync(LoginUrl, parameters);
-
-                if (response.Content?.Contains("1") == true)
-                {
-                    IsAuthenticated = true;
-                    _logger.Log("Giriþ baþarýlý!");
-                    return new ApiResponse<string>
-                    {
-                        Success = true,
-                        Message = "Giriþ baþarýlý"
-                    };
-                }
-
-                _logger.LogWarning("Giriþ baþarýsýz, captcha yanlýþ olabilir");
-                return new ApiResponse<string>
-                {
-                    Success = false,
-                    Message = "Giriþ baþarýsýz. Captcha kodu yanlýþ olabilir.",
-                    Data = Convert.ToBase64String(_captchaService.GetLastCaptchaImage() ?? Array.Empty<byte>())
-                };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Giriþ hatasý: {ex.Message}");
-                return new ApiResponse<string>
-                {
-                    Success = false,
-                    Message = ex.Message
-                };
-            }
-        }
+   
+    
     }
 }
