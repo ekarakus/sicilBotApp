@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36915.13 d17.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "sicilBotApp", "sicilBotApp\sicilBotApp.csproj", "{15560805-770A-4636-89B3-D0DE617C1BEC}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{15560805-770A-4636-89B3-D0DE617C1BEC}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{15560805-770A-4636-89B3-D0DE617C1BEC}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{15560805-770A-4636-89B3-D0DE617C1BEC}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{15560805-770A-4636-89B3-D0DE617C1BEC}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {110553D8-FA8B-48C8-910D-9702D1C0F47B}
+	EndGlobalSection
+EndGlobal
