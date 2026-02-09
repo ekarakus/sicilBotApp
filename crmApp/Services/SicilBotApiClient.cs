@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
     using System.Net.Http;
+using System.Reflection.Metadata;
 using System.Text;
 using System.Text.Json;
 using System.Threading.Tasks;
@@ -82,6 +83,38 @@ namespace crmApp.Services
             catch
             {
                 return false;
+            }
+        }
+
+        // crmApp\Services\SicilBotApiClient.cs
+
+        //bu metot gazete url li verilen pdf gazetenin metnini elde eder
+        public async Task<string> GetGazetteText(string gazetteUrl)
+        {
+            try
+            {
+                //metin olarak döndürülecek gazete url'sini API'ye gönderiyoruz
+                var url = $"{_baseUrl}/getGazetteText?gazetteUrl={Uri.EscapeDataString(gazetteUrl)}";
+                
+                
+
+
+                var response = await _httpClient.GetAsync(url);
+                if (!response.IsSuccessStatusCode)
+                {
+                    return $"API hatasý: {response.StatusCode}";
+                }
+
+                var responseContent = await response.Content.ReadAsStringAsync();
+                var apiResponse = JsonSerializer.Deserialize<ApiResponse<string>>(
+                    responseContent,
+                    new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+
+                return apiResponse?.Data ?? string.Empty;
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
             }
         }
     }

@@ -325,8 +325,8 @@
                                         }
                                         @if (!string.IsNullOrEmpty(gazette.VisitUrl))
                                         {
-                                            <a href="@gazette.VisitUrl" target="_blank" class="btn btn-sm btn-info">
-                                                <i class="fas fa-external-link-alt"></i> Görüntüle
+                                            <a href="#" data-url="@gazette.VisitUrl" target="_blank" class="btn btn-sm btn-info btn-view-text">
+                                                <i class="fas fa-external-link-alt"></i> PDF Texti Görüntüle
                                             </a>
                                         }
                                     </td>
@@ -344,6 +344,36 @@
             </div>
         }
     }
+</div>
+
+<!-- Modal Popup -->
+<div class="modal fade" id="gazetteTextModal" tabindex="-1" role="dialog" aria-labelledby="gazetteTextModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-scrollable" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="gazetteTextModalLabel">Gazete Metni</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Kapat">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div id="gazetteTextContent">
+                    <div class="text-center">
+                        <div class="spinner-border text-primary" role="status">
+                            <span class="sr-only">Yükleniyor...</span>
+                        </div>
+                        <p class="mt-2">Gazete metni yükleniyor...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-dismiss="modal">Kapat</button>
+                <button type="button" class="btn btn-primary" id="btnCopyText">
+                    <i class="fas fa-copy"></i> Metni Kopyala
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
 
 @section Scripts {
@@ -364,6 +394,82 @@
                 alert('Lütfen Ticaret Sicili No veya en az 5 karakterlik Ticaret Unvanı giriniz.');
                 e.preventDefault();
                 return false;
+            }
+        });
+
+        // PDF Texti Görüntüle butonu
+                $(document).on('click', '.btn-view-text', function(e) {
+            // Linkin yönlendirmesini iptal et
+            e.preventDefault();
+
+            var gazetteUrl = $(this).data('url');
+
+            // Modal'ı aç
+            $('#gazetteTextModal').modal('show');
+
+            // Loading göster
+            $('#gazetteTextContent').html(
+                '<div class="text-center">' +
+                '<div class="spinner-border text-primary" role="status">' +
+                '<span class="sr-only">Yükleniyor...</span>' +
+                '</div>' +
+                '<p class="mt-2">Gazete metni yükleniyor...</p>' +
+                '</div>'
+            );
+
+            // API çağrısı yap
+            $.ajax({
+                url: '/home/GetGazetteText',
+                method: 'GET',
+                data: { gazetteUrl: gazetteUrl },
+                success: function(response) {
+                    
+                    if (response.success && response.data) {
+                        $('#gazetteTextContent').html(
+                            '<pre style="white-space: pre-wrap; word-wrap: break-word;">' +
+                            response.data +
+                            '</pre>'
+                        );
+                    } else {
+                        $('#gazetteTextContent').html(
+                            '<div class="alert alert-warning">' +
+                            '<i class="fas fa-exclamation-triangle"></i> ' +
+                            (response.message || 'Gazete metni alınamadı.') +
+                            '</div>'
+                        );
+                    }
+                },
+                error: function(xhr, status, error) {
+                    console.error('API Hatası:', error);
+                    $('#gazetteTextContent').html(
+                        '<div class="alert alert-danger">' +
+                        '<i class="fas fa-times-circle"></i> ' +
+                        'Gazete metni alınırken bir hata oluştu: ' + error +
+                        '</div>'
+                    );
+                }
+            });
+        });
+
+        // Metni kopyala butonu
+        $('#btnCopyText').on('click', function() {
+            var text = $('#gazetteTextContent pre').text();
+
+            if (text) {
+                navigator.clipboard.writeText(text).then(function() {
+                    // Başarılı kopyalama bildirimi
+                    var btn = $('#btnCopyText');
+                    var originalText = btn.html();
+                    btn.html('<i class="fas fa-check"></i> Kopyalandı!');
+                    btn.addClass('btn-success').removeClass('btn-primary');
+
+                    setTimeout(function() {
+                        btn.html(originalText);
+                        btn.addClass('btn-primary').removeClass('btn-success');
+                    }, 2000);
+                }).catch(function(err) {
+                    alert('Metin kopyalanamadı: ' + err);
+                });
             }
         });
     </script>

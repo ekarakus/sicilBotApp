@@ -13,7 +13,8 @@ namespace sicilBotApp.Services
         private const string CaptchaPattern = @"<img[^>]*?id=['""]CaptchaImg['""][^>]*?src=['""]([^'""]+?)['""]";
         private bool _disposed;
         private byte[]? _lastCaptchaImage;
-
+        // Tesseract thread-safe olmadýðý için kilit kullanýyoruz
+        private static readonly object _ocrLock = new object();
         public CaptchaService(IHttpClientWrapper httpClient, Infrastructure.ICustomLogger logger)
         {
             _httpClient = httpClient;
@@ -22,13 +23,6 @@ namespace sicilBotApp.Services
             _tesseractEngine = new Lazy<TesseractEngine>(() =>
             {
                 var tessdataPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "tessdata");
-
-                if (!Directory.Exists(tessdataPath))
-                {
-                    throw new DirectoryNotFoundException(
-                        $"Tessdata klasörü bulunamadý: {tessdataPath}");
-                }
-
                 return new TesseractEngine(tessdataPath, "eng", EngineMode.Default);
             });
         }
@@ -37,42 +31,25 @@ namespace sicilBotApp.Services
         {
             try
             {
-                _logger.Log("Captcha görsel yükleniyor...");
-
+                // Ana sayfayý deðil, direkt login modalýnýn olduðu yeri çekmek daha hýzlý olabilir
+                // Ancak sitenin akýþýna göre ana sayfa da uygundur.
                 var htmlContent = await _httpClient.GetStringAsync("https://www.ticaretsicil.gov.tr/");
                 var captchaUrl = ExtractCaptchaUrl(htmlContent);
 
                 if (string.IsNullOrEmpty(captchaUrl))
-                {
-                    _logger.LogError("Captcha URL'i bulunamadý - Kritik hata!");
-                    return new DTOs.CaptchaResponse
-                    {
-                        Success = false,
-                        Message = "Captcha URL'i bulunamadý. Sistem captcha yükleyemiyor.",
-                        RequiresManualInput = false,
-                        IsCriticalError = true
-                    };
-                }
+                    return ErrorResponse("Captcha URL'i bulunamadý.");
 
                 var imageBytes = await _httpClient.GetByteArrayAsync(captchaUrl);
-                
                 if (imageBytes == null || imageBytes.Length == 0)
-                {
-                    _logger.LogError("Captcha görseli indirilemedi - Kritik hata!");
-                    return new DTOs.CaptchaResponse
-                    {
-                        Success = false,
-                        Message = "Captcha görseli indirilemedi.",
-                        RequiresManualInput = false,
-                        IsCriticalError = true
-                    };
-                }
+                    return ErrorResponse("Captcha görseli boþ döndü.");
 
                 _lastCaptchaImage = imageBytes;
 
-                using var captchaImage = ConvertToImage(imageBytes);
-                var ocrText = ResolveCaptchaWithOcr(captchaImage);
+                // OCR iþlemi
+                var ocrText = ResolveCaptchaWithOcr(imageBytes);
 
+                // Ticaret Sicil captchalarý genelde 5 karakterdir. 
+                // Kontrolü ona göre sýkýlaþtýrabilirsin.
                 var ocrSuccess = !string.IsNullOrWhiteSpace(ocrText) && ocrText.Length >= 4;
 
                 return new DTOs.CaptchaResponse
@@ -81,49 +58,48 @@ namespace sicilBotApp.Services
                     CaptchaImageBase64 = Convert.ToBase64String(imageBytes),
                     AutoResolvedText = ocrSuccess ? ocrText : null,
                     RequiresManualInput = !ocrSuccess,
-                    IsCriticalError = false,
-                    Message = ocrSuccess 
-                        ? $"OCR baþarýlý: {ocrText}" 
-                        : "OCR baþarýsýz, manuel giriþ gerekli"
+                    Message = ocrSuccess ? $"OCR baþarýlý: {ocrText}" : "OCR yetersiz."
                 };
             }
             catch (Exception ex)
             {
-                _logger.LogError($"Captcha yükleme hatasý: {ex.Message}");
-                return new DTOs.CaptchaResponse
-                {
-                    Success = false,
-                    Message = $"Captcha yükleme hatasý: {ex.Message}",
-                    RequiresManualInput = false,
-                    IsCriticalError = true
-                };
+                _logger.LogError($"Captcha hatasý: {ex.Message}");
+                return ErrorResponse(ex.Message);
             }
         }
-
+        private DTOs.CaptchaResponse ErrorResponse(string message) => new DTOs.CaptchaResponse
+        {
+            Success = false,
+            Message = message,
+            IsCriticalError = true
+        };
         public byte[]? GetLastCaptchaImage()
         {
             return _lastCaptchaImage;
         }
 
-        public string ResolveCaptchaWithOcr(Image captchaImage)
+        public string ResolveCaptchaWithOcr(byte[] imageBytes)
         {
-            try
+            // Singleton olduðu için ayný anda sadece BÝR thread OCR yapabilir
+            lock (_ocrLock)
             {
-                using var bitmap = new Bitmap(captchaImage);
+                try
+                {
+                    using var pix = Pix.LoadFromMemory(imageBytes);
+                    // Görüntü iyileþtirme: Captcha genelde gürültülüdür. 
+                    // Tesseract gürültülü görsellerde Gri tonlama (Grayscale) ile daha iyi çalýþýr.
+                    using var processedPix = pix.ConvertRGBToGray();
 
-                using var pix = Pix.LoadFromMemory(BitmapToBytes(bitmap));
-                using var page = _tesseractEngine.Value.Process(pix);
+                    using var page = _tesseractEngine.Value.Process(processedPix);
+                    var text = page.GetText().Trim();
 
-                var text = page.GetText().Trim();
-                text = CleanOcrResult(text);
-
-                _logger.Log($"OCR sonucu: '{text}'");
-                return text;
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"OCR hatasý: {ex.Message}");
-                return string.Empty;
+                    return CleanOcrResult(text);
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogError($"OCR Ýþlem Hatasý: {ex.Message}");
+                    return string.Empty;
+                }
             }
         }
 

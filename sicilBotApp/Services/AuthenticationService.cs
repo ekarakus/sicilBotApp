@@ -17,13 +17,33 @@ namespace sicilBotApp.Services
 
         public bool IsAuthenticated { get; private set; }
 
+        private static readonly SemaphoreSlim _loginLock = new SemaphoreSlim(1, 1);
+
         public AuthenticationService(IHttpClientWrapper httpClient, ICaptchaService captchaService, ICustomLogger logger)
         {
             _httpClient = httpClient;
             _captchaService = captchaService;
             _logger = logger;
         }
+        public async Task<ApiResponse<bool>> EnsureLoggedInAsync()
+        {
+            // Önce lock'a girmeden çerez var mý diye bakabilirsin (Performans için)
+            // Ama en garantisi lock içine girmektir.
+            await _loginLock.WaitAsync();
+            try
+            {
+                // Burada basit bir sayfa isteði atýp oturumun hala canlý olup olmadýðýný 
+                // HttpClientWrapper.IsSessionExpired üzerinden kontrol edebiliriz.
+                // Eðer canlýysa direkt true dön.
 
+                _logger.Log("Oturum tazeleme kontrolü yapýlýyor...");
+                return await LoginAsync(); // Mevcut login metodun
+            }
+            finally
+            {
+                _loginLock.Release();
+            }
+        }
         public async Task<ApiResponse<bool>> LoginAsync(string? captchaText = null)
         {
             try

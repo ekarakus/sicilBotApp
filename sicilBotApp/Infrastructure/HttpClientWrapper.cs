@@ -3,6 +3,8 @@ using Docnet.Core.Models;
 using iText.Kernel.Pdf;
 using iText.Kernel.Pdf.Canvas.Parser;
 using iText.Kernel.Pdf.Canvas.Parser.Listener;
+using sicilBotApp.DTOs;
+using sicilBotApp.Services;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.Net;
@@ -16,31 +18,42 @@ namespace sicilBotApp.Infrastructure
 {
     public class HttpClientWrapper : IHttpClientWrapper
     {
+
         
+        
+        
+        
+        private readonly string _tessdataPath = Path.Combine(AppContext.BaseDirectory, "tessdata");
+              
+
+
         private readonly HttpClient _httpClient;
         private readonly CookieContainer _cookieContainer;
-        private const string BaseUrl = "https://www.ticaretsicil.gov.tr/";
         private readonly string _sessionFilePath = Path.Combine(AppContext.BaseDirectory, "session.json");
-        private readonly string _tessdataPath = Path.Combine(AppContext.BaseDirectory, "tessdata");
         private readonly ICustomLogger _logger;
+        private const string BaseUrl = "https://www.ticaretsicil.gov.tr/";
+
+        // Ayný anda sadece bir iþlemin dosyaya yazmasýný veya login olmasýný saðlar
+        private static readonly SemaphoreSlim _fileLock = new SemaphoreSlim(1, 1);
 
         public CookieContainer Cookies => _cookieContainer;
 
-        public HttpClientWrapper()
-        {//aþaðýda ne yapmam gerekir?
-            _logger = new ConsoleLogger();
-            // Logger'ý burada da kullanmak için örnek oluþturuyoruz
+        public HttpClientWrapper(ICustomLogger logger)
+        {
+            _logger = logger;
             _cookieContainer = new CookieContainer();
+
             var handler = new HttpClientHandler
             {
                 CookieContainer = _cookieContainer,
-                AllowAutoRedirect = true,
-                UseCookies = true
+                UseCookies = true,
+                AllowAutoRedirect = true
             };
-            _httpClient = new HttpClient(handler) { BaseAddress = new Uri(BaseUrl) };
 
-            // Tarayýcý gibi görünmek için User-Agent ekliyoruz
+            _httpClient = new HttpClient(handler) { BaseAddress = new Uri(BaseUrl) };
             _httpClient.DefaultRequestHeaders.Add("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36");
+
+            LoadSession();
         }
 
         public async Task<string> GetStringAsync(string url) => await _httpClient.GetStringAsync(url);
@@ -58,19 +71,71 @@ namespace sicilBotApp.Infrastructure
             var response = await _httpClient.PostAsync(url, content);
             var responseContent = await response.Content.ReadAsStringAsync();
 
+            if (IsSessionExpired(responseContent))
+            {
+                throw new UnauthorizedAccessException("Oturum süresi dolmuþ.");
+            }
+
             return new HttpResponseData
             {
                 Content = responseContent.Trim(),
                 ResponseUrl = response.RequestMessage?.RequestUri
             };
         }
+        // <summary>
+        /// Verilen URL'deki PDF dosyasýný indirir, OCR ile metin çýkarýr ve sonucu döner.
+        ///     </summary>
 
         public async Task<string> DownloadPdfTextAsync(string url)
         {
             try
             {
-                // 1. Sayfa içeriðinden PDF linkini bul
+                
+                // Sayfa içeriðinden PDF linkini bul
                 var htmlContent = await GetStringAsync(url);
+
+                // Eðer HTML içeriði login sayfasýna yönlendirdiyse, oturum dolmuþ demektir
+                if (IsSessionExpired(htmlContent))
+                {
+                    _logger.LogWarning("Oturum süresi dolmuþ veya giriþ yapýlmamýþ.");
+                    throw new UnauthorizedAccessException("Oturum süresi dolmuþ. Lütfen tekrar giriþ yapýn.");
+                }
+
+                //eðer içinde <form id="FormGuvenlikKodu">  kodu varsa içeriðe eriþmen için doðrulama kodunu girmen gerekiyor
+                // demektir. Bu durumda da cpathca kodunu çöz.
+                // <img  id="CaptchaImg" src="/captcha/captcha.php?1770637946"/> gibi bir kod var ise captcha var demektir.
+                // O zaman captcha çözme servisini çaðýrarak doðrulama kodunu çöz ve tekrar dene.
+                // captcha kodu nu CaptchaIlan metin alanýna yazýppost
+                // ile https://www.ticaretsicil.gov.tr/view/hizlierisim/guvenlikkodudogrula.php E gönderemk gerekiyor
+                //SONUÇ 1 ise doðrulama kodu doðrundý  demektirr.
+                //O zaman tekrar DownloadPdfTextAsync metodunu çaðýrarak pdf içeriðini çekmeye çalýþabilirsin.
+
+                if (htmlContent.Contains("<form id=\"FormGuvenlikKodu\">"))
+                {
+                    _logger.LogWarning("Sayfa doðrulama kodu gerektiriyor. Captcha çözme iþlemi baþlatýlýyor...");
+                    var captchaService = new CaptchaService(this, _logger);
+                    var captchaResponse = await captchaService.LoadCaptchaAsync();
+                    if (captchaResponse.IsCriticalError)
+                    {
+                        throw new Exception($"Captcha yüklenirken kritik bir hata oluþtu: {captchaResponse.Message}");
+                    }
+                    if (captchaResponse.RequiresManualInput)
+                    {
+                        throw new Exception("Sayfa doðrulama kodu gerektiriyor ve otomatik çözüm baþarýsýz oldu. Lütfen manuel olarak doðrulama kodunu girin.");
+                    }
+                    // Doðrulama kodunu sunucuya gönder
+                    var verifyResponse = await PostMultipartAsync("/view/hizlierisim/guvenlikkodudogrula.php", new Dictionary<string, string>
+                    {
+                        { "CaptchaIlan", captchaResponse.AutoResolvedText ?? string.Empty }
+                    });
+                    if (!verifyResponse.Content.Equals("1"))
+                    {
+                        throw new Exception("Doðrulama kodu doðrulanamadý. Lütfen tekrar deneyin.");
+                    }
+                    _logger.Log("Doðrulama kodu baþarýyla doðrulandý. PDF içeriði çekilmeye çalýþýlýyor...");
+                     return await DownloadPdfTextAsync(url); // Doðrulama baþarýlýysa iþlemi tekrar dene
+                }
+
                 var pdfPath = ExtractPdfUrlFromHtml(htmlContent);
 
                 if (string.IsNullOrWhiteSpace(pdfPath))
@@ -83,10 +148,24 @@ namespace sicilBotApp.Infrastructure
                 // 3. OCR ve Metin Ayýklama iþlemini baþlat
                 return await ExtractTextFromPdfWithOcr(pdfBytes);
             }
+            catch (UnauthorizedAccessException)
+            {
+                throw; // Bu exception'ý üst katmana ilet
+            }
             catch (Exception ex)
             {
+                _logger.LogError($"PDF Ýþleme Hatasý: {ex.Message}");
                 throw new Exception($"PDF Ýþleme Hatasý: {ex.Message}", ex);
             }
+        }
+
+        private bool IsSessionExpired(string htmlContent)
+        {
+            // Oturum dolmuþsa veya giriþ yapýlmamýþsa login sayfasýna yönlendirir
+            //eðer html kodlarýnda "view/menu/cikis.php" yok ise giriþ yapýlmamýþ veya oturum dolmuþ demektir.
+            //Çünkü bu link sadece giriþ yapýldýktan sonra görünür.
+            return htmlContent.Contains("GÝRÝÞ YAPMALISINIZ");
+                   
         }
 
         private async Task<string> ExtractTextFromPdfWithOcr(byte[] pdfBytes)
@@ -167,36 +246,68 @@ namespace sicilBotApp.Infrastructure
             return string.Empty;
         }
 
+        // HttpClientWrapper içinde çerezleri kaydederken:
         public void SaveSession()
         {
+            _fileLock.Wait(); // Dosya yazýmýný kilitle
             try
             {
                 var uri = new Uri(BaseUrl);
-                // CookieContainer'dan tüm çerezleri alýyoruz (Domain bazlý)
-                var cookies = _cookieContainer.GetCookies(uri).Cast<Cookie>().ToList();
-                var json = JsonSerializer.Serialize(cookies);
+                var cookieList = _cookieContainer.GetCookies(uri).Cast<Cookie>()
+                    .Select(c => new CookieDto
+                    {
+                        Name = c.Name,
+                        Value = c.Value,
+                        Domain = c.Domain,
+                        Path = c.Path,
+                        Expires = c.Expires == DateTime.MinValue ? null : c.Expires
+                    }).ToList();
+
+                var json = JsonSerializer.Serialize(cookieList, new JsonSerializerOptions { WriteIndented = true });
                 File.WriteAllText(_sessionFilePath, json);
+                _logger.Log("Oturum çerezleri baþarýyla diske kaydedildi.");
             }
-            catch (Exception ex) { /* Loglama */ }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Oturum kaydedilirken hata: {ex.Message}");
+            }
+            finally
+            {
+                _fileLock.Release();
+            }
         }
 
         public void LoadSession()
         {
             if (!File.Exists(_sessionFilePath)) return;
+
+            _fileLock.Wait(); // Okurken dosyanýn yazýlmadýðýndan emin ol
             try
             {
                 var json = File.ReadAllText(_sessionFilePath);
-                var cookies = JsonSerializer.Deserialize<List<Cookie>>(json);
-                if (cookies != null)
+                var cookieDtos = JsonSerializer.Deserialize<List<CookieDto>>(json);
+
+                if (cookieDtos != null)
                 {
                     var uri = new Uri(BaseUrl);
-                    foreach (var cookie in cookies)
+                    foreach (var dto in cookieDtos)
                     {
+                        var cookie = new Cookie(dto.Name, dto.Value, dto.Path, dto.Domain);
+                        if (dto.Expires.HasValue) cookie.Expires = dto.Expires.Value;
+
                         _cookieContainer.Add(uri, cookie);
                     }
+                    _logger.Log($"Diskten {cookieDtos.Count} adet çerez yüklendi.");
                 }
             }
-            catch (Exception ex) { /* Loglama */ }
+            catch (Exception ex)
+            {
+                _logger.LogError($"Oturum yüklenirken hata: {ex.Message}");
+            }
+            finally
+            {
+                _fileLock.Release();
+            }
         }
     }
 

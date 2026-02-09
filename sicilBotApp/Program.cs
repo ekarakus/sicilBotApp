@@ -23,11 +23,17 @@ builder.Services.AddCors(options =>
     });
 });
 
-// sicilBot servisleri - SCOPED olarak (her istek için yeni instance)
-builder.Services.AddScoped<ICustomLogger, ConsoleLogger>();
-builder.Services.AddScoped<IHttpClientWrapper, HttpClientWrapper>();
-builder.Services.AddScoped<ICaptchaService, CaptchaService>();
-builder.Services.AddScoped<IAuthenticationService, AuthenticationService>();
+// Önce altyapı (Infrastructure)
+builder.Services.AddSingleton<ICustomLogger, ConsoleLogger>();
+builder.Services.AddSingleton<IHttpClientWrapper, HttpClientWrapper>();
+
+// Sonra Captcha (Singleton çünkü HttpClientWrapper ve Logger Singleton)
+builder.Services.AddSingleton<ICaptchaService, CaptchaService>();
+
+// Sonra Auth (Singleton çünkü CaptchaService Singleton)
+builder.Services.AddSingleton<IAuthenticationService, AuthenticationService>();
+
+// En son iş servisleri (Scoped olabilirler)
 builder.Services.AddScoped<IGazetteSearchService, GazetteSearchService>();
 
 // Health check

@@ -38,7 +38,7 @@ namespace sicilBotApp.Controllers
         {
             _logger.Log("Captcha istendi");
             var captchaResponse = await _captchaService.LoadCaptchaAsync();
-            
+
             return Ok(new ApiResponse<CaptchaResponse>
             {
                 Success = !captchaResponse.IsCriticalError,
@@ -56,7 +56,7 @@ namespace sicilBotApp.Controllers
         public async Task<IActionResult> Search([FromBody] CompanySearchRequest request)
         {
             _logger.Log($"Arama istendi: {request?.CompanyName}");
-            
+
             if (request == null)
             {
                 return BadRequest(new ApiResponse<object>
@@ -78,6 +78,34 @@ namespace sicilBotApp.Controllers
         public IActionResult Ping()
         {
             return Ok(new { Status = "Healthy", Timestamp = System.DateTime.UtcNow });
+        }
+
+        //buraya yeni bir metot ekle ve parametre olarak gelen gazete url sini alý, gazeteyi indiren ve ocr ile metine döndüdürp veren endopint
+
+        /// <summary>
+        /// burada parametre olarak bir gazete url'si alýr, gazeteyi indirir ve OCR ile metine dönüþtürür
+        /// </summary>
+        [HttpGet("getGazetteText")]
+        public async Task<IActionResult> GetGazetteText([FromQuery] string gazetteUrl)
+        {
+            _logger.Log($"Gazete metni istendi: {gazetteUrl}");
+
+            if (string.IsNullOrEmpty(gazetteUrl))
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Geçersiz gazete URL'si"
+                });
+            }
+
+            var ocrResult = await _gazetteService.GetGazetteTextAsync(gazetteUrl);
+            return Ok(new ApiResponse<string>
+            {
+                Success = !string.IsNullOrEmpty(ocrResult),
+                Message = string.IsNullOrEmpty(ocrResult) ? "OCR iþlemi baþarýsýz oldu" : "OCR iþlemi baþarýlý",
+                Data = ocrResult
+            });
         }
     }
 }

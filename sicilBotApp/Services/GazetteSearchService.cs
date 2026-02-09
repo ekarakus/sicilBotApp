@@ -1,6 +1,8 @@
+using sicilBotApp.DTOs;
+using sicilBotApp.Extensions; // Extension'ý buraya ekledik
+using sicilBotApp.Infrastructure;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
-using sicilBotApp.Infrastructure;
 
 namespace sicilBotApp.Services
 {
@@ -24,28 +26,9 @@ namespace sicilBotApp.Services
         public async Task<DTOs.ApiResponse<List<DTOs.GazetteInfo>>> SearchGazettesAsync(
             DTOs.CompanySearchRequest request)
         {
-            try
+            // MERKEZÝ NOKTA: Tüm arama iþlemini Retry mekanizmasýyla sarmalýyoruz.
+            return await _authService.ExecuteWithRetryAsync(_logger, async () =>
             {
-                // Giriþ kontrolü ve gerekirse otomatik giriþ
-                if (!_authService.IsAuthenticated)
-                {
-                    _logger.Log("Kullanýcý oturum açmamýþ, otomatik giriþ yapýlýyor...");
-                    
-                    var loginResult = await _authService.LoginAsync();
-                    
-                    if (!loginResult.Success)
-                    {
-                        _logger.LogError($"Otomatik giriþ baþarýsýz: {loginResult.Message}");
-                        return new DTOs.ApiResponse<List<DTOs.GazetteInfo>>
-                        {
-                            Success = false,
-                            Message = $"Giriþ yapýlamadý: {loginResult.Message}"
-                        };
-                    }
-                    
-                    _logger.Log("Otomatik giriþ baþarýlý");
-                }
-
                 _logger.Log($"Gazete aramasý yapýlýyor: {request.CompanyName}");
 
                 var parameters = new Dictionary<string, string>
@@ -55,51 +38,28 @@ namespace sicilBotApp.Services
                     { "TicaretUnvani", request.CompanyName }
                 };
 
+                // HttpClientWrapper içindeki PostMultipartAsync veya DownloadPdfTextAsync 
+                // zaten kendi içinde IsSessionExpired kontrolü yapýp UnauthorizedAccessException fýrlatýyor.
                 var response = await _httpClient.PostMultipartAsync(SearchUrl, parameters);
 
-                if (response.ResponseUrl?.AbsoluteUri != SearchUrl)
+                // Ekstra Güvenlik: Eðer sunucu yönlendirme yaptýysa bunu hata olarak fýrlat ki Retry tetiklensin
+                if (response.ResponseUrl?.AbsoluteUri != SearchUrl && response.Content.Contains("login"))
                 {
-                    _logger.LogWarning("Oturum süresi dolmuþ, yeniden giriþ yapýlýyor...");
-                    
-                    // Oturum dolmuþ, yeniden giriþ yap
-                    var reloginResult = await _authService.LoginAsync();
-                    
-                    if (!reloginResult.Success)
-                    {
-                        _logger.LogError($"Yeniden giriþ baþarýsýz: {reloginResult.Message}");
-                        return new DTOs.ApiResponse<List<DTOs.GazetteInfo>>
-                        {
-                            Success = false,
-                            Message = $"Oturum yenilenirken hata oluþtu: {reloginResult.Message}"
-                        };
-                    }
-                    
-                    _logger.Log("Yeniden giriþ baþarýlý, arama tekrarlanýyor...");
-                    
-                    // Aramayý tekrar yap
-                    response = await _httpClient.PostMultipartAsync(SearchUrl, parameters);
+                    throw new UnauthorizedAccessException("Oturum geçersiz, yönlendirme saptandý.");
                 }
 
                 var gazettes = await ParseGazettes(response.Content ?? string.Empty);
 
-                return new DTOs.ApiResponse<List<DTOs.GazetteInfo>>
+                return new ApiResponse<List<GazetteInfo>>
                 {
                     Success = true,
                     Message = $"{gazettes.Count} adet gazete bulundu",
                     Data = gazettes
                 };
-            }
-            catch (Exception ex)
-            {
-                _logger.LogError($"Arama hatasý: {ex.Message}");
-                return new DTOs.ApiResponse<List<DTOs.GazetteInfo>>
-                {
-                    Success = false,
-                    Message = ex.Message
-                };
-            }
+            });
         }
 
+        // firma aramasý sonucunda gelen html içeriðinden gazete bilgilerini parse eden metot
         private async Task<List<DTOs.GazetteInfo>> ParseGazettes(string html)
         {
             var gazettes = new List<DTOs.GazetteInfo>();
@@ -158,7 +118,7 @@ namespace sicilBotApp.Services
 
             return gazettes;
         }
-
+        // HTML içeriðinden gelen metni temizleyen yardýmcý metot
         private string CleanHtmlText(string text)
         {
             if (string.IsNullOrWhiteSpace(text))
@@ -174,6 +134,17 @@ namespace sicilBotApp.Services
             
             // Baþ ve sondaki boþluklarý temizle
             return text.Trim();
+        }
+
+        // gazete url'si alýr, gazeteyi indirir ve OCR ile metine dönüþtürür
+        public async Task<string> GetGazetteTextAsync(string gazetteUrl)
+        {
+            // PDF indirme iþlemi de artýk koruma altýnda!
+            return await _authService.ExecuteWithRetryAsync(_logger, async () =>
+            {
+                _logger.Log($"Gazete indiriliyor: {gazetteUrl}");
+                return await _httpClient.DownloadPdfTextAsync(gazetteUrl);
+            });
         }
     }
 }

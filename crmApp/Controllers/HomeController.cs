@@ -61,10 +61,25 @@ namespace crmApp.Controllers
                 return View(model);
             }
         }
-
-        public IActionResult Privacy()
+        [HttpGet]
+        public async Task<IActionResult> GetGazetteText(string gazetteurl)
         {
-            return View();
+            try
+            {
+                var text = await _apiClient.GetGazetteText(gazetteurl);
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    // Frontend'in beklediği formatta JSON döndür
+                    return Json(new { success = true, data = text });
+                }
+                return Json(new { success = false, message = "Gazete metni alınamadı veya içerik boş." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "GetGazetteText hatası");
+                // Hata durumunda da frontend'e uygun formatta JSON döndür
+                return Json(new { success = false, message = $"Sunucu hatası: {ex.Message}" });
+            }
         }
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
