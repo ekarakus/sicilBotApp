@@ -11,6 +11,7 @@ namespace sicilBotApp.Infrastructure
 
         void SaveSession();
         void LoadSession();
+        Task<byte[]> DownloadPdfAsync(string pdfUrl);
     }
 
     public class HttpResponseData

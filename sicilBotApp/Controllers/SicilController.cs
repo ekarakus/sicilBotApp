@@ -107,5 +107,32 @@ namespace sicilBotApp.Controllers
                 Data = ocrResult
             });
         }
+
+        //<summary>
+        // burada parametre olarak bir gazete url'si alýr, gazeteyi indirir ve PDF olarak döndürür
+        //</summary>
+        [HttpGet("getGazettePdf")]
+        public async Task<IActionResult> GetGazettePdf([FromQuery] string pdfUrl)
+        {
+            _logger.Log($"Gazete PDF istendi: {pdfUrl}");
+            if (string.IsNullOrEmpty(pdfUrl))
+            {
+                return BadRequest(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Geçersiz gazete URL'si"
+                });
+            }
+            var pdfBytes = await _gazetteService.GetGazettePdfAsync(pdfUrl);
+            if (pdfBytes == null || pdfBytes.Length == 0)
+            {
+                return NotFound(new ApiResponse<object>
+                {
+                    Success = false,
+                    Message = "Gazete PDF'si bulunamadý veya indirilemedi"
+                });
+            }
+            return File(pdfBytes, "application/pdf", "gazette.pdf");
+        }
     }
 }

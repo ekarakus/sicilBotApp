@@ -14,7 +14,7 @@ namespace sicilBotApp.Services
         private const string SearchUrl = "https://www.ticaretsicil.gov.tr/view/hizlierisim/ilangoruntuleme_ok.php";
 
         public GazetteSearchService(
-            IHttpClientWrapper httpClient, 
+            IHttpClientWrapper httpClient,
             IAuthenticationService authService,
             ICustomLogger logger)
         {
@@ -63,7 +63,7 @@ namespace sicilBotApp.Services
         private async Task<List<DTOs.GazetteInfo>> ParseGazettes(string html)
         {
             var gazettes = new List<DTOs.GazetteInfo>();
-            
+
             if (string.IsNullOrWhiteSpace(html))
             {
                 return gazettes;
@@ -80,7 +80,7 @@ namespace sicilBotApp.Services
 
                 // Her <tr> satýrýný parse et (thead hariç, tbody içindekiler)
                 var rowPattern = @"<tr>\s*<td>(?<mudurluk>.*?)</td>\s*<td[^>]*>(?<sicilNo>.*?)</td>\s*<td>(?<unvan>.*?)</td>\s*<td[^>]*>\s*(?<yayinTarihi>\d{2}\.\d{2}\.\d{4}).*?</td>\s*<td[^>]*>(?<sayi>.*?)</td>\s*<td[^>]*>(?<sayfa>.*?)</td>\s*<td[^>]*>(?<ilanTuru>.*?)</td>\s*<td[^>]*id=""IlanIdG(?<ilanId>.*?)"">\s*<a href=""(?<pdfUrl>.*?)""";
-                
+
                 var matches = Regex.Matches(html, rowPattern, RegexOptions.Singleline | RegexOptions.IgnoreCase);
 
                 foreach (Match match in matches)
@@ -94,8 +94,8 @@ namespace sicilBotApp.Services
                             RegisterNumber = CleanHtmlText(match.Groups["sicilNo"].Value),
                             CompanyTitle = CleanHtmlText(match.Groups["unvan"].Value),
                             PublicationDate = publicationDateStr,
-                            PublishDate = DateTime.TryParseExact(publicationDateStr, "dd.MM.yyyy", 
-                                System.Globalization.CultureInfo.InvariantCulture, 
+                            PublishDate = DateTime.TryParseExact(publicationDateStr, "dd.MM.yyyy",
+                                System.Globalization.CultureInfo.InvariantCulture,
                                 System.Globalization.DateTimeStyles.None, out var date) ? date : DateTime.MinValue,
                             IssueNumber = CleanHtmlText(match.Groups["sayi"].Value),
                             PageNumber = CleanHtmlText(match.Groups["sayfa"].Value),
@@ -128,10 +128,10 @@ namespace sicilBotApp.Services
 
             // HTML etiketlerini temizle
             text = Regex.Replace(text, @"<[^>]+>", string.Empty);
-            
+
             // Fazla boþluklarý temizle
             text = Regex.Replace(text, @"\s+", " ");
-            
+
             // Baþ ve sondaki boþluklarý temizle
             return text.Trim();
         }
@@ -144,6 +144,15 @@ namespace sicilBotApp.Services
             {
                 _logger.Log($"Gazete indiriliyor: {gazetteUrl}");
                 return await _httpClient.DownloadPdfTextAsync(gazetteUrl);
+            });
+        }
+        public async Task<byte[]> GetGazettePdfAsync(string pdfUrl)
+        {
+            // PDF indirme iþlemi de artýk koruma altýnda!
+            return await _authService.ExecuteWithRetryAsync(_logger, async () =>
+            {
+                _logger.Log($"Gazete PDF indiriliyor: {pdfUrl}");
+                return await _httpClient.DownloadPdfAsync(pdfUrl);
             });
         }
     }

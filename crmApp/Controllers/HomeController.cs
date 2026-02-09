@@ -82,6 +82,32 @@ namespace crmApp.Controllers
             }
         }
 
+        // <summary>
+        // pdf dosyasının içeriğini talep et. gelen pdf yi binary olarak alıp pdf  döndürür.
+        //</summary>
+
+
+        [HttpGet]
+        public async Task<IActionResult> GetGazettePdf(string pdfUrl)
+        {
+            try
+            {
+                var pdfBytes = await _apiClient.GetPdfContentAsync(pdfUrl);
+                if (pdfBytes != null && pdfBytes.Length > 0)
+                {
+                    return File(pdfBytes, "application/pdf", "document.pdf");
+                }
+                return NotFound("PDF içeriği alınamadı veya dosya boş.");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "GetPdfContent hatası");
+                return StatusCode(500, $"Sunucu hatası: {ex.Message}");
+            }
+        }
+
+
+
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
         public IActionResult Error()
         {

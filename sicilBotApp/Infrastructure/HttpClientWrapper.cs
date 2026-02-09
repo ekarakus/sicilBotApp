@@ -85,14 +85,26 @@ namespace sicilBotApp.Infrastructure
         // <summary>
         /// Verilen URL'deki PDF dosyasýný indirir, OCR ile metin çýkarýr ve sonucu döner.
         ///     </summary>
-
         public async Task<string> DownloadPdfTextAsync(string url)
+        {
+            // 1. pdf i indir
+         var pdfBytes=   DownloadPdfAsync(url).Result;
+            // 2. OCR ve Metin Ayýklama iþlemini baþlat
+            return await ExtractTextFromPdfWithOcr(pdfBytes);
+        }
+        //<summary>
+        // pdfurl'sini indir ve döndür
+        //</summary>
+        // DownloadPdfTextAsync
+        //
+        
+        public async Task<byte[]> DownloadPdfAsync(string pdfUrl)
         {
             try
             {
                 
                 // Sayfa içeriðinden PDF linkini bul
-                var htmlContent = await GetStringAsync(url);
+                var htmlContent = await GetStringAsync(pdfUrl);
 
                 // Eðer HTML içeriði login sayfasýna yönlendirdiyse, oturum dolmuþ demektir
                 if (IsSessionExpired(htmlContent))
@@ -133,7 +145,7 @@ namespace sicilBotApp.Infrastructure
                         throw new Exception("Doðrulama kodu doðrulanamadý. Lütfen tekrar deneyin.");
                     }
                     _logger.Log("Doðrulama kodu baþarýyla doðrulandý. PDF içeriði çekilmeye çalýþýlýyor...");
-                     return await DownloadPdfTextAsync(url); // Doðrulama baþarýlýysa iþlemi tekrar dene
+                     return await DownloadPdfAsync(pdfUrl); // Doðrulama baþarýlýysa iþlemi tekrar dene
                 }
 
                 var pdfPath = ExtractPdfUrlFromHtml(htmlContent);
@@ -145,8 +157,7 @@ namespace sicilBotApp.Infrastructure
                 var absolutePdfUrl = pdfPath.StartsWith("http") ? pdfPath : new Uri(new Uri(BaseUrl), pdfPath).ToString();
                 var pdfBytes = await GetByteArrayAsync(absolutePdfUrl);
 
-                // 3. OCR ve Metin Ayýklama iþlemini baþlat
-                return await ExtractTextFromPdfWithOcr(pdfBytes);
+                return pdfBytes;
             }
             catch (UnauthorizedAccessException)
             {
@@ -158,6 +169,10 @@ namespace sicilBotApp.Infrastructure
                 throw new Exception($"PDF Ýþleme Hatasý: {ex.Message}", ex);
             }
         }
+
+        
+       
+
 
         private bool IsSessionExpired(string htmlContent)
         {

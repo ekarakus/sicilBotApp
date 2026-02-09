@@ -319,7 +319,7 @@
                                     <td>
                                         @if (!string.IsNullOrEmpty(gazette.PdfUrl))
                                         {
-                                            <a href="@gazette.PdfUrl" target="_blank" class="btn btn-sm btn-danger">
+                                            <a  href="#" data-url="@gazette.VisitUrl" target="_blank" class="btn btn-sm btn-danger btn-show-pdf">
                                                 <i class="fas fa-file-pdf"></i> PDF İndir
                                             </a>
                                         }
@@ -472,5 +472,38 @@
                 });
             }
         });
+
+        //pdf dosyasını api den indir ve burada göster
+        // gelen pdf dosyasının içeriğini modal pop up içinde göster
+            $(document).on('click', '.btn-show-pdf', function(e) {
+                e.preventDefault();
+                var pdfUrl = $(this).data('url');
+    
+               //ajax ile istek yap ve backend tarafından pdf içeriğini iste
+                $.ajax({
+                    url: '/home/GetGazettePdf',
+                    method: 'GET',
+                    data: { pdfUrl: pdfUrl },
+                    xhrFields: {
+                        responseType: 'blob' // PDF dosyasını blob olarak al
+                    },
+                    success: function(response) {
+                        // Blob verisini URL.createObjectURL ile geçici bir URL'ye dönüştür
+                        var blobUrl = URL.createObjectURL(response);
+    
+                        // Yeni bir sekmede PDF'i aç
+                        window.open(blobUrl, '_blank');
+    
+                        // Geçici URL'yi serbest bırak (isteğe bağlı)
+                        setTimeout(function() {
+                            URL.revokeObjectURL(blobUrl);
+                        }, 10000); // 10 saniye sonra serbest bırak
+                    },
+                    error: function(xhr, status, error) {
+                        alert('PDF indirilemedi: ' + error);
+                    }
+                });
+            });
+
     </script>
 }

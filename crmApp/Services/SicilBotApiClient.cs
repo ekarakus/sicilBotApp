@@ -117,6 +117,28 @@ namespace crmApp.Services
                 return ex.Message;
             }
         }
+
+        //<summary>
+        // bu metot gazete url'si verilen pdf gazetenin içeriðini byte array olarak elde eder
+        //</summary>
+        public async Task<byte[]> GetPdfContentAsync(string pdfUrl)
+        {
+            try
+            {
+                var url = $"{_baseUrl}/getGazettePdf?pdfUrl={Uri.EscapeDataString(pdfUrl)}";
+                var response = await _httpClient.GetAsync(url);
+                if (!response.IsSuccessStatusCode)
+                {
+                    throw new Exception($"API hatasý: {response.StatusCode}");
+                }
+                return await response.Content.ReadAsByteArrayAsync();
+            }
+            catch (Exception ex)
+            {
+                throw new Exception($"PDF içeriði alýnýrken hata: {ex.Message}");
+            }
+
+        }
     }
 
     // DTO'lar
