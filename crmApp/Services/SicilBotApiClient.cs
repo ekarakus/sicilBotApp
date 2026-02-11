@@ -16,7 +16,7 @@ namespace crmApp.Services
         public SicilBotApiClient(HttpClient httpClient)
         {
             _httpClient = httpClient;
-            _baseUrl = "http://localhost:5002/api/sicil"; // PORT 5002'ye güncellendi
+            _baseUrl = "http://localhost:4444/api/sicil"; // PORT 5002'ye güncellendi
             _httpClient.Timeout = TimeSpan.FromMinutes(2); // OCR uzun sürebilir
         }
 

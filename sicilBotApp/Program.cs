@@ -17,7 +17,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("CrmAppPolicy", policy =>
     {
-        policy.WithOrigins("http://localhost:5000", "https://localhost:5001", "http://localhost:*")
+        policy.WithOrigins(  "https://localhost:5004", "http://localhost:*")
               .AllowAnyMethod()
               .AllowAnyHeader();
     });
@@ -39,10 +39,10 @@ builder.Services.AddScoped<IGazetteSearchService, GazetteSearchService>();
 // Health check
 builder.Services.AddHealthChecks();
 
-// Kestrel ayarları - PORT 5002'ye değiştirildi
+// Kestrel ayarları - PORT 5001'e değiştirildi
 builder.WebHost.ConfigureKestrel(options =>
 {
-    options.ListenLocalhost(5002); // Farklı port kullan
+    options.ListenLocalhost(5001); // Port 5001 olarak güncellendi
 });
 
 var app = builder.Build();
@@ -59,7 +59,7 @@ app.UseAuthorization();
 app.MapControllers();
 app.MapHealthChecks("/health");
 
-Console.WriteLine("sicilBotApp API çalışıyor: http://localhost:5002");
-Console.WriteLine("Swagger UI: http://localhost:5002/swagger");
+Console.WriteLine("sicilBotApp API çalışıyor: http://localhost:4444");
+Console.WriteLine("Swagger UI: http://localhost:4444/swagger");
 
 app.Run();

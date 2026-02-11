@@ -111,7 +111,7 @@ namespace crmApp.Controllers
         //  </summary>
 
 
-        [HttpGet]
+        [HttpPost]
         public async Task<IActionResult> GetGazetteExtract(AnnouncementSearchCriteria firma,string gazeteMetni)
         {
             try
