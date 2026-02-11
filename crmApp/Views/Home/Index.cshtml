@@ -371,6 +371,9 @@
                 <button type="button" class="btn btn-primary" id="btnCopyText">
                     <i class="fas fa-copy"></i> Metni Kopyala
                 </button>
+                <button type="button" class="btn btn-success" id="extractText">
+                    <i class="fas fa-file-alt"></i> Metni Çıkar
+                </button>
             </div>
         </div>
     </div>
@@ -503,6 +506,38 @@
                         alert('PDF indirilemedi: ' + error);
                     }
                 });
+            });
+
+            // extractText butonu ile pdf içeriğinden metin çıkar
+            // ajax ile istek yap ve backend tarafından pdf içeriğinden metin çıkar
+            // listelen kayıttan tr den bilgileri (SicilNo,TicaretUnvani,SicilMudurlugu,Sayfano,sayino) ve modal içine alınan metni gönder
+            $(document).on("click","#extractText",function(e){
+                   
+                //home/GetGazetteExtract endpointine ajax ile istek yap
+                $.ajax({
+                    url: '/home/GetGazetteExtract',
+                    method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({
+                        SicilNo: $('#gazetteTextContent pre').text().match(/Sicil No:\s*(\d+)/)[1],
+                        TicaretUnvani: $('#gazetteTextContent pre').text().match(/Ticaret Unvanı:\s*(.+)/)[1],
+                        SicilMudurlugu: $('#gazetteTextContent pre').text().match(/Sicil Müdürlüğü:\s*(.+)/)[1],
+                        SayfaNo: $('#gazetteTextContent pre').text().match(/Sayfa No:\s*(\d+)/)[1],
+                        SayiNo: $('#gazetteTextContent pre').text().match(/Sayı No:\s*(\d+)/)[1],
+                        gazeteMetni: $('#gazetteTextContent pre').text()
+                    }),
+                    success: function(response) {
+                        if(response.success){
+                            alert('Metin başarıyla çıkarıldı ve kaydedildi.');
+                        } else {
+                            alert('Metin çıkarılırken bir hata oluştu: ' + response.message);
+                        }
+                    },
+                    error: function(xhr, status, error) {
+                        alert('Metin çıkarılırken bir hata oluştu: ' + error);
+                    }
+                });
+
             });
 
     </script>

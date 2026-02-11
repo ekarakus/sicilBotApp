@@ -106,6 +106,30 @@ namespace crmApp.Controllers
             }
         }
 
+        //<summary>
+        // ayıklanan pdf metninden firma bilgilerini ve gazete bilgileri kullanarak firmanın ilgili gazete kayıt metnini elde et (ayıkla)
+        //  </summary>
+
+
+        [HttpGet]
+        public async Task<IActionResult> GetGazetteExtract(AnnouncementSearchCriteria firma,string gazeteMetni)
+        {
+            try
+            {
+                var extractedText = new GazetteExtractionService().ExtractSpecificAnnouncement(gazeteMetni, firma);
+                if (!string.IsNullOrWhiteSpace(extractedText))
+                {
+                    return Json(new { success = true, data = extractedText });
+                }
+                return Json(new { success = false, message = "Eşleşen kayıt bulunamadı." });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Gazette ayıklama hatası");
+                return Json(new { success = false, message = $"Sunucu hatası: {ex.Message}" });
+            }
+
+        }
 
 
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
