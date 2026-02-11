@@ -18,9 +18,7 @@ namespace sicilBotApp.Infrastructure
 {
     public class HttpClientWrapper : IHttpClientWrapper
     {
-
-        
-        
+           
         
         
         private readonly string _tessdataPath = Path.Combine(AppContext.BaseDirectory, "tessdata");
