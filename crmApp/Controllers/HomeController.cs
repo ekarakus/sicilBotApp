@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using System;
 using System.Diagnostics;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace crmApp.Controllers
@@ -12,11 +13,13 @@ namespace crmApp.Controllers
     {
         private readonly ILogger<HomeController> _logger;
         private readonly SicilBotApiClient _apiClient;
-
+        private readonly ExtractionAppService _extractionService;
         public HomeController(ILogger<HomeController> logger, SicilBotApiClient apiClient)
         {
             _logger = logger;
             _apiClient = apiClient;
+            var provider = new OpenRouterLLMProvider();
+            _extractionService = new ExtractionAppService(provider);
         }
 
         public async Task<IActionResult> Index()
@@ -61,18 +64,37 @@ namespace crmApp.Controllers
                 return View(model);
             }
         }
-        [HttpGet]
-        public async Task<IActionResult> GetGazetteText(string gazetteurl)
+        [AutoValidateAntiforgeryToken]
+        [HttpPost]
+        public async Task<IActionResult> GetGazetteText(string gazetteurl, GazetteQueryCriteria firma)
         {
             try
             {
                 var text = await _apiClient.GetGazetteText(gazetteurl);
-                if (!string.IsNullOrWhiteSpace(text))
+
+
+                if (string.IsNullOrWhiteSpace(text))
                 {
                     // Frontend'in beklediği formatta JSON döndür
-                    return Json(new { success = true, data = text });
+                    return Json(new { success = false, message = "Gazete metni alınamadı veya içerik boş." });
+
                 }
-                return Json(new { success = false, message = "Gazete metni alınamadı veya içerik boş." });
+
+
+                firma.RawGazetteText = text;
+                var result = await _extractionService.ExecuteExtractionAsync(firma);
+
+                if (null==result)
+                {
+                    // Ayıklama sonucunda metin bulunamadıysa uygun formatta JSON döndür
+                    return Json(new { success = false, message = "Ayıklama sonucunda metin bulunamadı." });
+                }
+
+                return Json(new { success = true, data = result
+
+                 });
+
+                
             }
             catch (Exception ex)
             {

@@ -17,7 +17,7 @@
                 <div class="col-md-3">
                     <select class="form-control input-lg" asp-for="SicilMudurluguId">
                         <option value="0">Sicil Müdürlüğü Seçiniz...</option>
-                        <option value="232">İSTANBUL</option>
+                        <option value="232" selected="selected">İSTANBUL</option>
                         <option value="18">ANKARA</option>
                         <option value="233">İZMİR</option>
                         <option value="1">ACIPAYAM</option>
@@ -261,7 +261,7 @@
                     <input asp-for="TicSicNo" class="form-control input-lg" placeholder="Ticaret Sicili No">
                 </div>
                 <div class="col-md-3">
-                    <input type="text" class="form-control input-lg" asp-for="TicaretUnvani" placeholder="Ticaret Unvanı (En az ilk 5 karakter)">
+                    <input type="text" value="vestel elektronik" class="form-control input-lg" asp-for="TicaretUnvani" placeholder="Ticaret Unvanı (En az ilk 5 karakter)">
                 </div>
                 <div class="col-md-3">
                     <button type="submit" class="btn btn-primary btn-lg">Sorgula</button>
@@ -371,9 +371,7 @@
                     <button type="button" class="btn btn-primary" id="btnCopyText">
                         <i class="fas fa-copy"></i> Metni Kopyala
                     </button>
-                    <button type="button" class="btn btn-success" id="extractText">
-                        <i class="fas fa-file-alt"></i> Metni Çıkar
-                    </button>
+                   
                 </div>
             </div>
         </div>
@@ -401,57 +399,61 @@
             });
 
             // PDF Texti Görüntüle butonu
-            $(document).on('click', '.btn-view-text', function(e) {
-                e.preventDefault();
+         $(document).on('click', '.btn-view-text', function(e) {
+            e.preventDefault();
 
-                var gazetteUrl = $(this).data('url');
-                var row = $(this).closest('tr');
-                var extractBtn = $('#extractText');
+            var gazetteUrl = $(this).data('url');
+            var row = $(this).closest('tr');
+            
 
-                // Satırdan verileri al ve Metni Çıkar butonuna data-* olarak ekle
-                extractBtn.data('sicilmudurlugu', row.find('td:eq(0)').text().trim());
-                extractBtn.data('sicilno', row.find('td:eq(1)').text().trim());
-                extractBtn.data('ticaretunvani', row.find('td:eq(2)').text().trim());
-                extractBtn.data('sayino', row.find('td:eq(4)').text().trim());
-                extractBtn.data('sayfano', row.find('td:eq(5)').text().trim());
+            var formData = new FormData();
+            formData.append('RegistryOffice', row.find('td:eq(0)').text().trim());
+            formData.append('RegistrationNumber', row.find('td:eq(1)').text().trim());
+            formData.append('CompanyName', row.find('td:eq(2)').text().trim());
+            formData.append('IssueNumber', row.find('td:eq(4)').text().trim());
+            formData.append('PageNumber', row.find('td:eq(5)').text().trim());
+            formData.append('AnnouncementType', row.find('td:eq(6)').text().trim());
+            formData.append('PublicationDate', row.find('td:eq(3)').text().trim());
+            formData.append('__RequestVerificationToken', $('input[name="__RequestVerificationToken"]').val());
+            formData.append('GazetteUrl', gazetteUrl);
 
-                // Modal'ı aç
-                $('#gazetteTextModal').modal('show');
+            $('#gazetteTextModal').modal('show');
 
-                // API çağrısı yap
-                $.ajax({
-                    url: '/home/GetGazetteText',
-                    method: 'GET',
-                    data: { gazetteUrl: gazetteUrl },
-                    success: function(response) {
-                        if (response.success && response.data) {
-                            // Olası XSS saldırılarını önlemek için metni HTML olarak kodlayın
-                            var encodedText = $('<div />').text(response.data).html();
-                            $('#gazetteTextContent').html(
-                                '<pre style="white-space: pre-wrap; word-wrap: break-word;">' +
-                                encodedText +
-                                '</pre>'
-                            );
-                        } else {
-                            $('#gazetteTextContent').html(
-                                '<div class="alert alert-warning">' +
-                                '<i class="fas fa-exclamation-triangle"></i> ' +
-                                (response.message || 'Gazete metni alınamadı.') +
-                                '</div>'
-                            );
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        console.error('API Hatası:', error);
-                        $('#gazetteTextContent').html(
-                            '<div class="alert alert-danger">' +
-                            '<i class="fas fa-times-circle"></i> ' +
-                            'Gazete metni alınırken bir hata oluştu: ' + error +
-                            '</div>'
-                        );
-                    }
-                });
-            });
+                     $.ajax({
+            url: '/home/GetGazetteText',
+            method: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false,
+            dataType: 'json',
+            success: function(response) {
+                if (response.success && response.data) {
+                    var encodedText = $('<div />').text(response.data.fullContent).html();
+                    $('#gazetteTextContent').html(
+                        '<pre style="white-space: pre-wrap; word-wrap: break-word;">' +
+                        encodedText +
+                        '</pre>'
+                    );
+                } else {
+                    $('#gazetteTextContent').html(
+                        '<div class="alert alert-warning">' +
+                        '<i class="fas fa-exclamation-triangle"></i> ' +
+                        (response.message || 'Gazete metni alınamadı.') +
+                        '</div>'
+                    );
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('API Hatası:', xhr.responseText || error);
+                $('#gazetteTextContent').html(
+                    '<div class="alert alert-danger">' +
+                    '<i class="fas fa-times-circle"></i> ' +
+                    'Gazete metni alınırken bir hata oluştu: ' + (xhr.responseJSON?.message || error) +
+                    '</div>'
+                );
+            }
+        });
+        });
 
             // Metni kopyala butonu
             $('#btnCopyText').on('click', function() {
@@ -498,49 +500,7 @@
                 });
             });
 
-            // extractText butonu ile pdf içeriğinden metin çıkar
-            $(document).on("click","#extractText",function(e){
-                var $button = $(this);
-                var gazeteMetni = $('#gazetteTextContent pre').text();
-
-                if (!gazeteMetni) {
-                    alert('Çıkarılacak gazete metni bulunamadı.');
-                    return;
-                }
-
-                // Butonun data-* özelliklerinden verileri al
-                var dataToSend = {
-                    SicilMudurlugu: $button.data('sicilmudurlugu'),
-                    SicilNo: $button.data('sicilno'),
-                    TicaretUnvani: $button.data('ticaretunvani'),
-                    SayiNo: $button.data('sayino'),
-                    SayfaNo: $button.data('sayfano'),
-                    gazeteMetni: gazeteMetni
-                };
-
-                if (!dataToSend.SicilNo) {
-                    alert('Satır bilgileri alınamadı. Lütfen pencereyi kapatıp tekrar deneyin.');
-                    return;
-                }
-                
-                // home/GetGazetteExtract endpointine ajax ile istek yap
-                $.ajax({
-                    url: '/home/GetGazetteExtract',
-                    method: 'POST',
-                    contentType: 'application/json',
-                    data: JSON.stringify(dataToSend),
-                    success: function(response) {
-                        if(response.success){
-                            alert('Metin başarıyla çıkarıldı ve kaydedildi.');
-                        } else {
-                            alert('Metin çıkarılırken bir hata oluştu: ' + response.message);
-                        }
-                    },
-                    error: function(xhr, status, error) {
-                        alert('Metin çıkarılırken bir hata oluştu: ' + error);
-                    }
-                });
-            });
+            
 
             // Modal kapandığında verileri temizle
             $('#gazetteTextModal').on('hidden.bs.modal', function () {
